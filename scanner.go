@@ -35,10 +35,11 @@ type Def struct {
 }
 
 type Scanner struct {
-	space *regexp.Regexp
-	pos   Position
-	input []byte
-	def   []Def
+	trimWhitespace bool
+	space          *regexp.Regexp
+	pos            Position
+	input          []byte
+	def            []Def
 }
 
 type Result struct {
@@ -56,8 +57,9 @@ func NewScanner(def []Def) *Scanner {
 		def[i].regexp = regexp.MustCompile("^" + def[i].Pattern)
 	}
 	return &Scanner{
-		space: regexp.MustCompile(`^\s+`),
-		def:   def,
+		trimWhitespace: true,
+		space:          regexp.MustCompile(`^\s+`),
+		def:            def,
 	}
 }
 
@@ -67,13 +69,23 @@ func (this *Scanner) SetInput(input string) {
 	this.pos.Column = 1
 }
 
+func (this *Scanner) SetTrimWhitespace(trimWhitespace bool) {
+	this.trimWhitespace = trimWhitespace
+}
+
+func (this *Scanner) GetTrimWhitespace() bool {
+	return this.trimWhitespace
+}
+
 func (this *Scanner) skip() {
-	result := this.space.Find(this.input)
-	if result == nil {
-		return
+	if this.trimWhitespace {
+		result := this.space.Find(this.input)
+		if result == nil {
+			return
+		}
+		this.pos.move(result)
+		this.input = bytes.TrimPrefix(this.input, result)
 	}
-	this.pos.move(result)
-	this.input = bytes.TrimPrefix(this.input, result)
 }
 
 func (this *Scanner) scan() *Result {
